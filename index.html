@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoology Department Blood Bank</title>
+    <style>
+        * { box-sizing: border-box; font-family: sans-serif; margin: 0; padding: 0; }
+        body { background-color: #f3f4f6; color: #333; }
+        header { background-color: #dc2626; color: white; text-align: center; padding: 20px; }
+        header h1 { font-size: 24px; margin-bottom: 5px; }
+        .container { max-width: 600px; margin: 20px auto; padding: 0 15px; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .border-top-red { border-top: 4px solid #dc2626; }
+        h2 { color: #dc2626; font-size: 18px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #444; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
+        button { width: 100%; background-color: #dc2626; color: white; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #b91c1c; }
+        .donor-card { padding: 15px; border-radius: 8px; border: 2px solid #22c55e; background-color: #f0fdf4; margin-bottom: 10px; }
+        .donor-card.unavailable { border-color: #fca5a5; background-color: #fef2f2; }
+        .badge { background: #dc2626; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; float: right; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🩸 Zoology Department Blood Bank</h1>
+        <p>শিক্ষার্থীদের রক্তদান ডিরেক্টরি ও অনলাইন ডাটাবেজ</p>
+    </header>
+
+    <div class="container">
+        <!-- Donor Registration Form -->
+        <div class="card border-top-red">
+            <h2>নতুন রক্তদাতা নিবন্ধন / তথ্য আপডেট</h2>
+            <form id="donorForm">
+                <div class="form-group">
+                    <label>পূর্ণ নাম *</label>
+                    <input type="text" id="name" required placeholder="যেমন: আব্দুল্লাহ">
+                </div>
+                <div class="form-group">
+                    <label>মোবাইল নম্বর *</label>
+                    <input type="tel" id="phone" required placeholder="017xxxxxxxx">
+                </div>
+                <div class="form-group">
+                    <label>রক্তের গ্রুপ *</label>
+                    <select id="bloodGroup" required>
+                        <option value="">সিলেক্ট করুন</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>সর্বশেষ রক্তদানের তারিখ</label>
+                    <input type="date" id="lastDonation">
+                    <span style="font-size: 11px; color: #777;">কখনো রক্ত না দিয়ে থাকলে খালি রাখুন</span>
+                </div>
+                <button type="submit">তথ্য সেভ করুন</button>
+            </form>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="card">
+            <h2 style="color:#333">রক্তদাতা ফিল্টার করুন</h2>
+            <select id="filterGroup">
+                <option value="ALL">সকল গ্রুপের রক্ত</option>
+                <option value="A+">A+</option>
+                <option value="A-">A-</option>
+                <option value="B+">B+</option>
+                <option value="B-">B-</option>
+                <option value="AB+">AB+</option>
+                <option value="AB-">AB-</option>
+                <option value="O+">O+</option>
+                <option value="O-">O-</option>
+            </select>
+        </div>
+
+        <!-- Donor List Display -->
+        <div class="card">
+            <h2 style="color:#333">রক্তদাতাদের তালিকা</h2>
+            <div id="donorList">
+                <p style="color:#777;">ডাটা লোড হচ্ছে...</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
