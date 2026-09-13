@@ -1,7 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-
 const firebaseConfig = {
     apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAkJkYdRNyvqUc", 
     authDomain: "zoology-blood-bank.firebaseapp.com",
@@ -21,14 +20,13 @@ const filterGroup = document.getElementById('filterGroup');
 let allDonors = [];
 
 // ৯০ দিন হিসাব করার লজিক
-function getStatus(lastDonationDateStr) {
-    if (!lastDonationDateStr) {
+function getStatus(lastDonationDateObj) {
+    if (!lastDonationDateObj || isNaN(lastDonationDateObj.getTime())) {
         return { status: "রক্ত দিতে প্রস্তুত (Available)", isAvailable: true };
     }
 
     const today = new Date();
-    const lastDate = new Date(lastDonationDateStr);
-    const diffTime = Math.abs(today - lastDate);
+    const diffTime = Math.abs(today - lastDonationDateObj);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays >= 90) {
@@ -39,7 +37,21 @@ function getStatus(lastDonationDateStr) {
     }
 }
 
-// ডোনারদের তালিকা প্রদর্শন
+// সেফলি তারিখ কনভার্ট করার ফাংশন (Timestamp বা String দুইটাই হ্যান্ডেল করবে)
+function safeParseDate(lastDonationField) {
+    if (!lastDonationField) return null;
+    
+    // যদি Firebase Timestamp হয়
+    if (typeof lastDonationField.toDate === 'function') {
+        return lastDonationField.toDate();
+    }
+    
+    // যদি তারিখটি সাধারণ String বা Date অবজেক্ট হয়
+    const parsedDate = new Date(lastDonationField);
+    return isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+// ডোনারদের তালিকা প্রদর্শন করা
 function renderDonors(donors) {
     if (!donorList) return;
     donorList.innerHTML = '';
@@ -50,11 +62,11 @@ function renderDonors(donors) {
     }
 
     donors.forEach(donor => {
-        const lastDonationDate = donor.lastDonation ? donor.lastDonation.toDate() : null;
-        const { status, isAvailable } = getStatus(lastDonationDate);
+        const lastDonationDateObj = safeParseDate(donor.lastDonation);
+        const { status, isAvailable } = getStatus(lastDonationDateObj);
         
-        const lastDonationFormatted = lastDonationDate 
-            ? lastDonationDate.toLocaleDateString('bn-BD') 
+        const lastDonationFormatted = lastDonationDateObj 
+            ? lastDonationDateObj.toLocaleDateString('bn-BD') 
             : 'তথ্য নেই';
 
         const card = document.createElement('div');
@@ -163,4 +175,3 @@ window.markDonated = async function(id) {
 
 // পেজ লোড হলে ডাটা আনা
 loadDonors();
-        
