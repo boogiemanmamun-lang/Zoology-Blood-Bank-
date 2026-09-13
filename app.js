@@ -3,12 +3,12 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, where
 
 // আপনার আসল Firebase Config
 const firebaseConfig = {
-    apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAk", // আপনার আসল apiKey
+    apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAkJkYdRNyvqUc", // আপনার আসল apiKey
     authDomain: "zoology-blood-bank.firebaseapp.com",
     projectId: "zoology-blood-bank",
-    storageBucket: "zoology-blood-bank.appspot.com",
+    storageBucket: "zoology-blood-bank.firebasestorage.app",
     messagingSenderId: "495391678466",
-    appId: "1:495391678466:web:094b060632ba9" // আপনার আসল appId
+    appId: "1:495391678466:web:094b060632ba99bc27071b" // আপনার আসল appId
 };
 
 const app = initializeApp(firebaseConfig);
