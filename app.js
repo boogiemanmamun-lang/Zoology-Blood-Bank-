@@ -2,12 +2,12 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebas
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAkJkYdRNyvqUc",
-  authDomain: "zoology-blood-bank.firebaseapp.com",
-  projectId: "zoology-blood-bank",
-  storageBucket: "zoology-blood-bank.firebaseapp.com",
-  messagingSenderId: "495391678466",
-  appId: "1:495391678466:web:094b060632ba99bc27071b"
+    apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAkJkYdRNyvqUc",
+    authDomain: "zoology-blood-bank.firebaseapp.com",
+    projectId: "zoology-blood-bank",
+    storageBucket: "zoology-blood-bank.appspot.com",
+    messagingSenderId: "495391678466",
+    appId: "1:495391678466:web:094b060632ba99bc27071b" // আপনার আসল appId
 };
 
 const app = initializeApp(firebaseConfig);
@@ -19,28 +19,73 @@ const filterGroup = document.getElementById('filterGroup');
 
 let allDonors = [];
 
-// ৯০ দিন (৩ মাস) এর হিসাব বের করার লজিক
-function getStatus(lastDonationDateStr = "") {
+// ৯০ দিন হিসাব করার লজিক
+function getStatus(lastDonationDateStr) {
     if (!lastDonationDateStr) {
         return { status: "রক্ত দিতে প্রস্তুত (Available)", isAvailable: true };
     }
 
     const today = new Date();
     const lastDate = new Date(lastDonationDateStr);
-    const diffTime = Math.abs(today.getTime() - lastDate.getTime());
+    const diffTime = Math.abs(today - lastDate);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays >= 90) {
         return { status: "রক্ত দিতে প্রস্তুত (Available)", isAvailable: true };
     } else {
         const remaining = 90 - diffDays;
-        return { status: `ইতোমধ্যে ডোনেট করেছেন (${remaining} দিন পর আবার দিতে পারবেন)`, isAvailable: false };
+        return { status: `সাময়িক বিরতি (${remaining} দিন পর দিতে পারবেন)`, isAvailable: false };
     }
 }
 
-// নতুন রক্তদাতার তথ্য জমা নেওয়া
-if (donorForm) {
-    donorForm.addEventListener('submit', async (e) => {
+// ডোনারদের তালিকা প্রদর্শন করা
+function renderDonors(donors) {
+    donorList.innerHTML = '';
+    
+    if (donors.length === 0) {
+        donorList.innerHTML = '<p>কোনো রক্তদাতার তথ্য পাওয়া যায়নি।</p>';
+        return;
+    }
+
+    donors.forEach(donor => {
+        const lastDonationDate = donor.lastDonation ? donor.lastDonation.toDate() : null;
+        const { status, isAvailable } = getStatus(lastDonationDate);
+        
+        const lastDonationFormatted = lastDonationDate 
+            ? lastDonationDate.toLocaleDateString('bn-BD') 
+            : 'তথ্য নেই';
+
+        const card = document.createElement('div');
+        card.className = `donor-card ${isAvailable ? '' : 'unavailable'}`;
+        card.innerHTML = `
+            <h3>${donor.name}</h3>
+            <p><strong>রক্তের গ্রুপ:</strong> <span class="badge">${donor.bloodGroup}</span></p>
+            <p>📍 <strong>ঠিকানা:</strong> ${donor.address ? donor.address : 'তথ্য নেই'}</p>
+            <p>📞 <a href="tel:${donor.phone}">${donor.phone}</a></p>
+            <p>• ${status}</p>
+            <p><small>সর্বশেষ রক্তদান: ${lastDonationFormatted}</small></p>
+            ${isAvailable ? `<button onclick="markDonated('${donor.id}')" class="btn-donate">আজ ডোনেট করেছি</button>` : ''}
+        `;
+        donorList.appendChild(card);
+    });
+}
+
+// ডাটাবেজ থেকে ডোনার লোড করা
+async function loadDonors() {
+    try {
+        const querySnapshot = await getDocs(collection(db, "donors"));
+        allDonors = [];
+        querySnapshot.forEach((docSnap) => {
+            allDonors.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        renderDonors(allDonors);
+    } catch (error) {
+        console.error("Error loading donors: ", error);
+    }
+}
+
+// নতুন ডোনার যুক্ত করা (ডুপ্লিকেট ফোন নম্বর চেক সহ)
+donorForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const name = document.getElementById('name').value;
@@ -50,18 +95,17 @@ if (donorForm) {
     const lastDonation = document.getElementById('lastDonation').value;
 
     try {
-        // 🔍 ১. ডাটাবেজে আগে থেকে এই ফোন নম্বরটি আছে কিনা চেক করা
+        // ডুপ্লিকেট নম্বর চেক
         const donorsRef = collection(db, "donors");
         const q = query(donorsRef, where("phone", "==", phone));
         const querySnapshot = await getDocs(q);
 
-        // যদি ফোন নম্বর আগে থেকেই পাওয়া যায়
         if (!querySnapshot.empty) {
             alert("এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে নিবন্ধন করা হয়েছে!");
-            return; // এখানেই কোড থামিয়ে দেবে, সেভ হতে দেবে না
+            return;
         }
 
-        // 💾 ২. নতুন ফোন নম্বর হলে ডাটা সেভ হবে
+        // ডাটা সেভ
         await addDoc(donorsRef, {
             name: name,
             phone: phone,
@@ -81,87 +125,34 @@ if (donorForm) {
     }
 });
 
-
-// ডাটাবেজ থেকে সকল রক্তদাতার তালিকা নিয়ে আসা
-async function loadDonors() {
-    if (!donorList) return;
-    donorList.innerHTML = "<p class='text-gray-500'>ডাটা লোড হচ্ছে...</p>";
-    try {
-        const querySnapshot = await getDocs(collection(db, "donors"));
-        allDonors = [];
-        querySnapshot.forEach((docSnap) => {
-            allDonors.push({ id: docSnap.id, ...docSnap.data() });
-        });
+// ফিল্টারিং
+filterGroup.addEventListener('change', (e) => {
+    const selectedGroup = e.target.value;
+    if (selectedGroup === 'ALL') {
         renderDonors(allDonors);
-    } catch (error) {
-        console.error("Error: ", error);
-        donorList.innerHTML = "<p class='text-red-500'>ডাটা লোড করতে ব্যর্থ হয়েছে!</p>";
+    } else {
+        const filtered = allDonors.filter(donor => donor.bloodGroup === selectedGroup);
+        renderDonors(filtered);
     }
-}
+});
 
-// স্ক্রিনে রক্তদাতাদের কার্ড আকারে দেখানো
-function renderDonors(donors = []) {
-    if (!donorList || !filterGroup) return;
-    const selectedGroup = filterGroup.value;
-    donorList.innerHTML = "";
-
-    const filtered = donors.filter((d) => selectedGroup === "ALL" || d.bloodGroup === selectedGroup);
-
-    if (filtered.length === 0) {
-        donorList.innerHTML = "<p class='text-gray-500'>কোনো তথ্য পাওয়া যায়নি।</p>";
-        return;
-    }
-
-    filtered.forEach((donor) => {
-        const info = getStatus(donor.lastDonation);
-        const card = document.createElement('div');
-        
-        card.className = `p-4 rounded-lg border-2 ${info.isAvailable ? 'border-green-500 bg-green-50' : 'border-red-300 bg-red-50'}`;
-        card.innerHTML = `
-            <div class="flex justify-between items-start">
-                <div>
-                    <h3 class="font-bold text-lg text-gray-800">${donor.name}</h3>
-                    <p class="text-sm text-gray-600">📞 <a href="tel:${donor.phone}" class="underline font-semibold text-blue-600">${donor.phone}</a></p>
-                    <p class="text-sm font-semibold mt-1 ${info.isAvailable ? 'text-green-700' : 'text-red-600'}">
-                        ● ${info.status}
-                    </p>
-                </div>
-                <span class="bg-red-600 text-white font-bold px-3 py-1 rounded-full text-sm">
-                    ${donor.bloodGroup}
-                </span>
-            </div>
-            <div class="mt-3 pt-2 border-t flex justify-between items-center text-xs text-gray-500">
-                <span>সর্বশেষ রক্তদান: ${donor.lastDonation || 'তথ্য নেই'}</span>
-                <button onclick="markAsDonated('${donor.id}')" class="bg-gray-800 hover:bg-black text-white px-2 py-1 rounded">
-                    আজ ডোনেট করেছি
-                </button>
-            </div>
-        `;
-        donorList.appendChild(card);
-    });
-}
-
-// "আজ ডোনেট করেছি" বাটন ফাংশন
-window.markAsDonated = async (donorId = "") => {
-    const todayStr = new Date().toISOString().split('T')[0];
+// আজ ডোনেট করেছি বাটন হ্যান্ডলার
+window.markDonated = async function(id) {
     if (confirm("আপনি কি নিশ্চিত যে আজ রক্ত দিয়েছেন?")) {
         try {
-            const donorRef = doc(db, "donors", donorId);
+            const donorRef = doc(db, "donors", id);
             await updateDoc(donorRef, {
-                lastDonation: todayStr
+                lastDonation: new Date()
             });
-            alert("আপনার রক্তদানের তারিখ সফলভাবে আপডেট করা হয়েছে!");
+            alert("আপনার রক্তদানের তথ্য আপডেট করা হয়েছে। ধন্যবাদ!");
             loadDonors();
         } catch (error) {
-            alert("আপডেট করা সম্ভব হয়নি!");
+            console.error("Error updating status: ", error);
+            alert("আপডেট করতে সমস্যা হয়েছে।");
         }
     }
 };
 
-if (filterGroup) {
-    filterGroup.addEventListener('change', () => renderDonors(allDonors));
-}
-
-// প্রারম্ভিক লোড
+// পেজ লোড হলে ডাটা আনা
 loadDonors();
-}
+          
