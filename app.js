@@ -1,13 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+// আপনার আসল Firebase Config
 const firebaseConfig = {
-    apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAkJkYdRNyvqUc",
+    apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAk", // আপনার আসল apiKey
     authDomain: "zoology-blood-bank.firebaseapp.com",
     projectId: "zoology-blood-bank",
     storageBucket: "zoology-blood-bank.appspot.com",
     messagingSenderId: "495391678466",
-    appId: "1:495391678466:web:094b060632ba99bc27071b" // আপনার আসল appId
+    appId: "1:495391678466:web:094b060632ba9" // আপনার আসল appId
 };
 
 const app = initializeApp(firebaseConfig);
@@ -43,7 +44,7 @@ function renderDonors(donors) {
     donorList.innerHTML = '';
     
     if (donors.length === 0) {
-        donorList.innerHTML = '<p>কোনো রক্তদাতার তথ্য পাওয়া যায়নি।</p>';
+        donorList.innerHTML = '<p style="padding: 10px; color: #666;">কোনো রক্তদাতার তথ্য পাওয়া যায়নি।</p>';
         return;
     }
 
@@ -155,4 +156,3 @@ window.markDonated = async function(id) {
 
 // পেজ লোড হলে ডাটা আনা
 loadDonors();
-          
