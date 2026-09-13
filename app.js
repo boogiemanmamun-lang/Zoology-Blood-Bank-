@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDseKsHoRE-1iwU8gQCraAkJkYdRNyvqUc",
@@ -41,30 +41,46 @@ function getStatus(lastDonationDateStr = "") {
 // নতুন রক্তদাতার তথ্য জমা নেওয়া
 if (donorForm) {
     donorForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
+    e.preventDefault();
 
-        const nameInput = document.getElementById('name');
-        const phoneInput = document.getElementById('phone');
-        const bloodGroupInput = document.getElementById('bloodGroup');
-        const lastDonationInput = document.getElementById('lastDonation');
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value.trim();
+    const address = document.getElementById('address').value;
+    const bloodGroup = document.getElementById('bloodGroup').value;
+    const lastDonation = document.getElementById('lastDonation').value;
 
-        try {
-            await addDoc(collection(db, "donors"), {
-                name: nameInput.value,
-                phone: phoneInput.value,
-                bloodGroup: bloodGroupInput.value,
-                lastDonation: lastDonationInput.value || null,
-                createdAt: new Date()
-            });
-            alert("সফলভাবে নিবন্ধন সম্পন্ন হয়েছে!");
-            donorForm.reset();
-            loadDonors();
-        } catch (error) {
-            console.error("Error: ", error);
-            alert("ডাটা সেভ করতে সমস্যা হয়েছে!");
+    try {
+        // 🔍 ১. ডাটাবেজে আগে থেকে এই ফোন নম্বরটি আছে কিনা চেক করা
+        const donorsRef = collection(db, "donors");
+        const q = query(donorsRef, where("phone", "==", phone));
+        const querySnapshot = await getDocs(q);
+
+        // যদি ফোন নম্বর আগে থেকেই পাওয়া যায়
+        if (!querySnapshot.empty) {
+            alert("এই মোবাইল নম্বরটি দিয়ে ইতোমধ্যে নিবন্ধন করা হয়েছে!");
+            return; // এখানেই কোড থামিয়ে দেবে, সেভ হতে দেবে না
         }
-    });
-}
+
+        // 💾 ২. নতুন ফোন নম্বর হলে ডাটা সেভ হবে
+        await addDoc(donorsRef, {
+            name: name,
+            phone: phone,
+            address: address,
+            bloodGroup: bloodGroup,
+            lastDonation: lastDonation ? new Date(lastDonation) : null,
+            createdAt: new Date()
+        });
+
+        alert("সফলভাবে নিবন্ধন সম্পন্ন হয়েছে!");
+        donorForm.reset();
+        loadDonors();
+
+    } catch (error) {
+        console.error("Error adding donor: ", error);
+        alert("তথ্য সেভ করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    }
+});
+
 
 // ডাটাবেজ থেকে সকল রক্তদাতার তালিকা নিয়ে আসা
 async function loadDonors() {
@@ -148,3 +164,4 @@ if (filterGroup) {
 
 // প্রারম্ভিক লোড
 loadDonors();
+}
